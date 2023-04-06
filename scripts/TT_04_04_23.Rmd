@@ -19,6 +19,7 @@ library(tidytuesdayR)
 library(tidyverse)
 library(ggplot2)
 library(ggrepel)
+library(here)
 
 ```
 
@@ -92,11 +93,14 @@ ggplot(home_vs_away_goals, aes(x = reorder(Team, diff), y = diff, fill = pos))+
   scale_fill_manual(values = c("#FF0000", "#00FF33"), guide = FALSE) +
   coord_flip() +
   labs(title = "EPL Home vs Away Goal Differential",
+       subtitle = "2020-2021 Season",
        x = "Team",
        y = "Goal Differential",
        caption = "*Positive differential indicates more goals scored at home") +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
+
+ggsave(here("figs", "epl_goal_diff.png"))
 
 ```
 
