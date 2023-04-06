@@ -1,0 +1,103 @@
+---
+title: "Tidy Tuesday 4/4/23"
+author: "Mark Wooten"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+## Premier League Match Data
+So, I have functionally no knowledge of soccer. Even less so about the Premier League. But I'm wanting to up my skill in r, in markdown, in data analysis and visualization so here we go! 
+
+
+```{r Load Libraries}
+library(tidytuesdayR)
+library(tidyverse)
+library(ggplot2)
+library(ggrepel)
+
+```
+
+
+```{r Load Data}
+tuesdata <- tidytuesdayR::tt_load(2023, week = 14)
+
+soccer <- tuesdata$soccer
+
+```
+
+Since I have very little understanding of the EPL, let me first figure out how many teams are even in the league. Let me also figure out hoe many games were played in the season. 
+
+```{r League Info}
+teams <- soccer %>%
+  select(HomeTeam) %>%
+  distinct()
+
+games <- soccer %>%
+  select(HomeTeam) %>%
+  group_by(HomeTeam) %>%
+  tally()
+
+avg_fouls <- soccer %>%
+  select(HF, AF) %>%
+  mutate(total_f = HF +AF) %>%
+  summarise(avg_f = mean(total_f))
+
+avg_yc <- soccer %>%
+  select(HY, AY) %>%
+  mutate(total_yc = HY +AY) %>%
+  summarise(avg_yc = mean(total_yc))
+
+avg_rc <- soccer %>%
+  select(HR, AR) %>%
+  mutate(total_rc = HR +AR) %>%
+  summarise(avg_rc = mean(total_rc))
+
+```
+
+From this I surmise there are 20 teams in the league which is corroborated by a quick Google search. This is a good start. Also, we see that each team had 19 home games, for a total of 38 games in the season. As for fouls and cards, looks like we see an average of 20 fouls, 3.3 yellow cards, and less than 1 red card per game. Look, I'm learning! 
+
+As a baseball fan, I sometimes think about runs scored at home vs on the road. I wonder if there are any significant differences here in the EPL?
+
+```{r Home vs Away Goals}
+
+home_goals <- soccer %>%
+  select(HomeTeam, FTHG) %>%
+  rename(Team = HomeTeam) %>%
+  group_by(Team) %>%
+  summarise(THG = sum(FTHG))
+
+away_goals <- soccer %>%
+  select(AwayTeam, FTAG) %>%
+  rename(Team = AwayTeam) %>%
+  group_by(Team) %>%
+  summarise(TAG = sum(FTAG))
+
+home_vs_away_goals <- inner_join(home_goals, away_goals) %>%
+  mutate(diff = THG - TAG,
+         pos = case_when(diff >0 ~ T,
+                         diff <0 ~ F))
+```
+
+Now that we've got a data set showing every team's total home and away goals as well as the differential between the two, let's graph it so we can visualize it more easily. 
+
+```{r Home/Road Goal Diff Visual}
+
+ggplot(home_vs_away_goals, aes(x = reorder(Team, diff), y = diff, fill = pos))+
+  geom_bar(stat="identity", colour = "black", size = 0.25) +
+  scale_fill_manual(values = c("#FF0000", "#00FF33"), guide = FALSE) +
+  coord_flip() +
+  labs(title = "EPL Home vs Away Goal Differential",
+       x = "Team",
+       y = "Goal Differential",
+       caption = "*Positive differential indicates more goals scored at home") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+
+```
+
+So now we know which teams scored more at home and which teams scored more on the road. We can see that the majority of teams have a positive home goal differential, which would indicate some home field advantage here. Only four teams scored more on the road. Man City with the highest differential placed first in the league, which stands to reason. Notice, also, little Watford with a dead even differential. They were relegated. 
