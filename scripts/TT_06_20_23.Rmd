@@ -1,0 +1,104 @@
+---
+title: "Tidy Tuesday 6/20/23"
+author: "Mark Wooten"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+
+```{r packages}
+library(tidytuesdayR)
+library(tidyverse)
+library(usmap)
+```
+
+
+Let's get started on a new Tidy Tuesday project. First thing's first: let's get some data.  
+
+
+```{r load data}
+tuesdata <- tidytuesdayR::tt_load('2023-06-20')
+
+ufo_sightings <- tuesdata$`ufo_sightings`
+places <- tuesdata$`places`
+day_parts_map <- tuesdata$`day_parts_map`
+
+```
+
+
+We're looking at UFO sightings and the first thing I'd like to know is what state had the most UFO sightings in 2022. So let's get to work making a map with that data. To start out, I'll make sure I've got just the date portion of the date/time as a seperate column. Then I can subset the data into only sightings from 2022. From there I'll generate a simple count of observations grouped by US state. 
+
+
+```{r get data for map for 2022}
+ufo_sightings$sight_year <- as.Date(ufo_sightings$reported_date_time_utc)
+
+ufo_22 <- ufo_sightings %>%
+  filter(between(sight_year, as.Date("2022-01-01"), as.Date("2022-12-31")),
+         country_code == 'US') %>%
+  count(state)
+
+```
+
+
+Now that we've got our data subset, let's plot it. This is my first time plotting a map! 
+
+
+```{r plot 2022 map}
+
+plot_usmap(data = ufo_22, values = "n", color = "black") +
+  scale_fill_continuous(
+    low = "white", high = "darkgreen", name = "UFO Sightings (2022)",
+    label = scales::comma) +
+  theme(legend.position = "right") +
+  labs(title = "UFO Sightings in 2022", 
+       subtitle = "From the National UFO Reporting Center") 
+
+```
+
+
+Unsurprisingly, states with larger populations seem to have more UFO sightings. Makes sense. 
+What if we could look at it on a per 10,000 person basis? For that, we'll have to get our data shaped up a little differently. First, I'm going to take the 'places' data and get a sum of the populations of each state. Then, I can join that data to the sighting data for 2022 while creating a variable for the sightings per 10,000 people ('sight_10k')
+
+
+```{r}
+pop_combined <- places %>%
+  select(state, country_code, population) %>%
+  filter(country_code == 'US') %>%
+  group_by(state) %>%
+  summarise(tot_pop = sum(population))
+
+sight_percap <- left_join(ufo_22, pop_combined, by = 'state') %>%
+  mutate(pop_10k = tot_pop/10000,
+         sight_10k = n/pop_10k)
+
+```
+
+
+Now that we've got a rate of sightings per 10,000 people let's run that map again. 
+
+
+```{r}
+plot_usmap(data = sight_percap, values = "sight_10k", color = "black") +
+  scale_fill_continuous(
+    low = "white", high = "darkgreen", name = "UFO Sightings per 10,000 People (2022)",
+    label = scales::comma) +
+  theme(legend.position = "right") +
+  labs(title = "UFO Sightings in 2022", 
+       subtitle = "From the National UFO Reporting Center") 
+```
+
+
+That changes the map! A lot of smaller population states are reporting UFO sightings at higher rates. Rurality seems to play into the numbers more than population. 
+
+The next thing I'm curious about is the time of day that sightings occur. Let's drill down into that, shall we?
+
+
+```{r}
+
+
+```
+
